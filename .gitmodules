@@ -1,6 +1,3 @@
 [submodule "YetiForceCRM"]
 	path = YetiForceCRM
 	url = git@github.com:YetiForceCompany/YetiForceCRM.git
-[submodule "nginx/modules/headers-more-nginx-module"]
-	path = nginx/modules/headers-more-nginx-module
-	url = git@github.com:openresty/headers-more-nginx-module.git
