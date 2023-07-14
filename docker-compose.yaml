@@ -1,0 +1,27 @@
+version: '3'
+services:
+  db:
+    build:
+      context: .
+      dockerfile: ./mariadb/Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - type: volume
+        source: db_data
+        target: /var/lib/mysql
+  crm:
+    build:
+      context: .
+      dockerfile: ./apache/Dockerfile
+    volumes:
+      - type: volume
+        source: crm_data
+        target: /var/www/html
+    ports:
+      - 80:80
+    depends_on:
+      - db
+volumes:
+  crm_data:
+  db_data:

@@ -1,0 +1,65 @@
+FROM php:8.0-apache
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public_html
+
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+  git \
+  gnupg \
+  imagemagick \
+  libc-client-dev\
+  libcurl4-openssl-dev \
+  libkrb5-dev \
+  libldap-dev \
+  libmagickwand-dev \
+  libpng-dev \
+  libxml2-dev \
+  libzip-dev  \
+  lsb-release \
+  zlib1g-dev \
+  && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  && apt-get install -y nodejs --no-install-recommends \
+  && npm install --global yarn@1 \
+  && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+  && docker-php-ext-install -j8 imap pdo_mysql curl gd xml zip soap iconv intl bcmath sockets exif ldap opcache \
+  && apt-get clean
+
+WORKDIR /opt
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && php composer-setup.php && php -r "unlink('composer-setup.php');" && mv composer.phar /usr/local/bin/composer
+RUN curl -sL https://github.com/Imagick/imagick/archive/refs/tags/3.7.0.tar.gz -o imagick.tar.gz \
+  && tar -xzf imagick.tar.gz \
+  && cd imagick-3.7.0 \
+  && phpize \
+  && ./configure \
+  && make \
+  && make install \
+  && docker-php-ext-enable imagick \
+  && cd .. \
+  && rm -rf imagick.tar.gz imagick-3.7.0
+
+COPY --chown=www-data:www-data --chmod=644 ./YetiForceCRM /var/www/html
+
+WORKDIR /var/www/html
+
+RUN --mount=type=cache,target=/root/.yarn YARN_CACHE_FOLDER=/root/.yarn rm .git && yarn install --modules-folder "./public_html/libraries" --ignore-optional --production=true
+WORKDIR /var/www/html/public_html/src
+RUN --mount=type=cache,target=/root/.yarn YARN_CACHE_FOLDER=/root/.yarn yarn install --ignore-optional --production=true
+
+WORKDIR /var/www/html
+
+RUN --mount=type=cache,target=/root/.composer/cache composer --no-interaction install --no-dev
+
+WORKDIR /var/www/html
+
+RUN install -owww-data -gwww-data -m755 -d config/Modules && find . -type d -exec chown www-data:www-data -- {} \+ && find . -type d -exec chmod 755 -- {} \+
+
+COPY ./YetiForceCRM/tests/setup/php/prod.ini /usr/local/etc/php/conf.d
+COPY ./php/docker-config.ini /usr/local/etc/php/conf.d
+COPY ./apache/entrypoint.sh ./apache/cron-runner.sh /
+
+SHELL ["/bin/sh", "-c"]
+ENTRYPOINT "/entrypoint.sh"
+EXPOSE 80
