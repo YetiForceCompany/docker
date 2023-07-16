@@ -1,5 +1,7 @@
 FROM php:8.0-apache
 
+LABEL org.opencontainers.image.authors="YetiForce SA" org.opencontainers.image.title="YetiForce CRM" org.opencontainers.image.source="https://github.com/YetiForceCompany/docker"
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public_html
