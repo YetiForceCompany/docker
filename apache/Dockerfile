@@ -58,8 +58,10 @@ RUN install -owww-data -gwww-data -m755 -d config/Modules && find . -type d -exe
 
 COPY ./YetiForceCRM/tests/setup/php/prod.ini /usr/local/etc/php/conf.d
 COPY ./php/docker-config.ini /usr/local/etc/php/conf.d
-COPY ./apache/entrypoint.sh ./apache/cron-runner.sh /
+COPY ./apache/cron-runner.sh ./apache/entrypoint.sh /
 
 SHELL ["/bin/sh", "-c"]
-ENTRYPOINT "/entrypoint.sh"
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD ["apache2-foreground"]
+
 EXPOSE 80
