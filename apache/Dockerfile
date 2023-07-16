@@ -4,6 +4,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public_html
 
+# Change the default document root in Apache
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
@@ -20,9 +21,24 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libzip-dev  \
   lsb-release \
   zlib1g-dev \
-  && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+  # Install Node.js with NodeSource
+  # https://github.com/docker-library/official-images/tree/5369615f65d4fee661f3057e5aa8248fae46f5bb#image-build
+  && key="9FD3B784BC1C6FC31A8A0A1C1655A0AB68576280" \
+  && keyring="/etc/apt/trusted.gpg.d/node.gpg.asc" \
+  && export GNUPGHOME="$(mktemp -d)" \
+  && gpg --batch --keyserver keyserver.ubuntu.com --recv-keys $key \
+  && gpg --batch --armor --export $key > $keyring \
+  && chmod a+r $keyring \
+  && gpgconf --kill all \
+  && rm -rf "$GNUPGHOME" \
+  && apt-key list > /dev/null \
+  && DISTRO="$(lsb_release -s -c)" \
+  && echo "deb [signed-by=$keyring] https://deb.nodesource.com/node_18.x $DISTRO main" | tee /etc/apt/sources.list.d/nodesource.list \
+  && echo "deb-src [signed-by=$keyring] https://deb.nodesource.com/node_18.x $DISTRO main" | tee -a /etc/apt/sources.list.d/nodesource.list \
+  && apt-get update \
   && apt-get install -y nodejs --no-install-recommends \
   && npm install --global yarn@1 \
+  # Add PHP extensions requered by YetiForceCRM
   && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
   && docker-php-ext-install -j8 imap pdo_mysql curl gd xml zip soap iconv intl bcmath sockets exif ldap opcache \
   && apt-get clean
@@ -33,6 +49,7 @@ RUN php -r "copy('https://raw.githubusercontent.com/composer/getcomposer.org/705
   && php composer-setup.php \
   && php -r "unlink('composer-setup.php');" \
   && mv composer.phar /usr/local/bin/composer
+# docker-php-ext-* does not work with the imagick extension; it must be compiled manually
 RUN curl -sL https://github.com/Imagick/imagick/archive/refs/tags/3.7.0.tar.gz -o imagick.tar.gz \
   && tar -xzf imagick.tar.gz \
   && cd imagick-3.7.0 \
