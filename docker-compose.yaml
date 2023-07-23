@@ -10,18 +10,26 @@ services:
       - type: volume
         source: db_data
         target: /var/lib/mysql
-  crm:
+    ports:
+      - 3306:3306
+  nginx:
     build:
       context: .
-      dockerfile: ./apache/Dockerfile
+      dockerfile: ./php/Dockerfile
+      target: nginx 
     volumes:
       - type: volume
         source: crm_data
         target: /var/www/html
     ports:
       - 80:80
-    depends_on:
-      - db
+  php:
+    build:
+      context: .
+      dockerfile: ./php/Dockerfile
+      target: php-prod
+    volumes_from:
+      - nginx:rw
 volumes:
   crm_data:
   db_data:
