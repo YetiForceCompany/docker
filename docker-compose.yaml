@@ -12,7 +12,19 @@ services:
         target: /var/lib/mysql
     ports:
       - 3306:3306
+  cron:
+    build:
+      context: ./cron
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 60s
+    volumes:
+      - type: volume
+        source: crm_data
+        target: /crm
   nginx:
+    hostname: yeti
     build:
       context: .
       dockerfile: ./php/Dockerfile

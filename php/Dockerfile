@@ -33,7 +33,7 @@ RUN curl -sL https://github.com/Imagick/imagick/archive/refs/tags/3.7.0.tar.gz -
 
 FROM php-base AS php-prod
 
-RUN cp "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY ./YetiForceCRM/tests/setup/php/prod.ini /usr/local/etc/php/conf.d
 COPY ./php/docker-config.ini /usr/local/etc/php/conf.d
 
