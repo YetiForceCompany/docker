@@ -1,0 +1,12 @@
+{
+  auto_https disable_redirects
+}
+
+{$HOSTNAME}:443 {
+	tls {$TLS_EMAIL}
+	reverse_proxy nginx:80
+}
+
+{$HOSTNAME}:80 {
+	reverse_proxy nginx:80
+}
