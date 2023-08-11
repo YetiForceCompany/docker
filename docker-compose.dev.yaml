@@ -1,0 +1,16 @@
+name: yetiforce-dev
+version: '3'
+services:
+  db:
+    ports:
+      - 3306:3306
+  php:
+    build:
+      target: php-dev
+    volumes:
+      - type: bind
+        source: ./YetiForceCRM
+        target: /var/www/html
+
+volumes:
+  crm_data: null

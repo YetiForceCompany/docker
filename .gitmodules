@@ -1,0 +1,3 @@
+[submodule "YetiForceCRM"]
+	path = YetiForceCRM
+	url = git@github.com:YetiForceCompany/YetiForceCRM.git

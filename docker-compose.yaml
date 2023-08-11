@@ -1,0 +1,67 @@
+name: yetiforce
+version: '3'
+services:
+  caddy:
+    hostname: ${HOSTNAME}
+    image: caddy:2.6
+    depends_on:
+      - nginx
+    env_file:
+      - .env
+    restart: on-failure
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+  db:
+    build:
+      context: .
+      dockerfile: ./mariadb/Dockerfile
+    env_file:
+      - .env
+    restart: on-failure
+    volumes:
+      - type: volume
+        source: db_data
+        target: /var/lib/mysql
+  php:
+    build:
+      context: .
+      dockerfile: ./php/Dockerfile
+      target: php-prod
+    restart: on-failure
+    volumes:
+      - type: volume
+        source: crm_data
+        target: /var/www/html
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+      target: nginx
+    depends_on:
+      - php
+    restart: on-failure
+    volumes_from:
+      - php:rw
+  cron:
+    build:
+      context: ./cron
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 60s
+    volumes_from:
+      - php:ro
+    depends_on:
+      - nginx
+  
+volumes:
+  crm_data:
+  db_data:
+  caddy_data:
+  caddy_config:
