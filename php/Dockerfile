@@ -49,6 +49,18 @@ COPY --from=build-yarn /opt/YetiForceCRM /opt/YetiForceCRM
 WORKDIR /opt/YetiForceCRM
 RUN --mount=type=cache,target=/root/.composer/cache composer --no-interaction install --no-dev
 
+FROM php-base AS build-test
+
+RUN php -r "copy('https://raw.githubusercontent.com/composer/getcomposer.org/70527179915d55b3811bebaec55926afd331091b/web/installer', 'composer-setup.php');" \
+  && php -r "if (hash_file('sha384', 'composer-setup.php') === 'e21205b207c3ff031906575712edab6f13eb0b361f2085f1f1237b7126d785e826a450292b6cfd1d64d92e6563bbde02') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" \
+  && php composer-setup.php \
+  && php -r "unlink('composer-setup.php');" \
+  && mv composer.phar /usr/local/bin/composer
+
+COPY --from=build-yarn /opt/YetiForceCRM /opt/YetiForceCRM
+WORKDIR /opt/YetiForceCRM
+RUN --mount=type=cache,target=/root/.composer/cache COMPOSER=composer_dev.json COMPOSER_NO_DEV=0 composer --no-interaction install
+
 FROM php-base AS php-prod
 
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
@@ -66,3 +78,13 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY ./YetiForceCRM/tests/setup/php/dev.ini /usr/local/etc/php/conf.d
 COPY ./php/docker-config.ini /usr/local/etc/php/conf.d
 COPY ./php/fpm.conf /usr/local/etc/php-fpm.d/zzz-docker.conf
+
+FROM php-base AS php-test
+
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY ./YetiForceCRM/tests/setup/php/dev.ini /usr/local/etc/php/conf.d
+COPY ./php/docker-config.ini /usr/local/etc/php/conf.d
+COPY ./php/fpm.conf /usr/local/etc/php-fpm.d/zzz-docker.conf
+WORKDIR /var/www/html
+COPY --from=build-test --chown=www-data:www-data --chmod=644 /opt/YetiForceCRM/ /var/www/html
+RUN install -owww-data -gwww-data -m755 -d config/Modules && find . -type d -exec chown www-data:www-data -- {} \+ && find . -type d -exec chmod 755 -- {} \+
